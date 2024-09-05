@@ -89,4 +89,38 @@ router.post("/", (req, res) => {
 
 });
 
+// update a note
+
+router.put("/:id", (req, res) => {
+  const note = notes.find((idea) => idea.id === +req.params.id);
+
+  if (!note) {
+    return res.status(404).json({
+      success: false,
+      error: "Resource not found",
+    });
+  }
+
+  note.text = req.body.text || note.text;
+  note.tag = req.body.tag || note.tag;
+
+  res.send({ success: true, data: note})
+})
+
+// delete a note
+
+router.delete("/:id", (req, res) =>{
+  const note = notes.find(note => note.id === +req.params.id)
+
+  if (!note) {
+    return res.status(404).json({
+      success: false,
+      error: "Resource not found",
+    });
+  }
+
+  notes.splice(notes.indexOf(note), 1)
+  res.send({success:true});
+})
+
 module.exports = router;
