@@ -1,0 +1,18 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "srv1220.hstgr.io",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "notes-api",
+            "database": "u959028339_notes_api_db",
+            "username": "u959028339_notes_api_user",
+            "password": "notes_api_Medco_11"
+        }
+    ]
+}

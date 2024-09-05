@@ -1,126 +1,108 @@
 const express = require("express");
 const router = express.Router();
+const mysqlConn = require("mysql2");
+require("dotenv").config();
 
-const notes = [
-  {
-    id: 1,
-    text: "A note about something I can't forget",
-    tag: "technology",
-    username: "Gustavo Vargas",
-    date: "2024-09-04",
-  },
-  {
-    id: 2,
-    text: "Reminder to buy groceries",
-    tag: "personal",
-    username: "John Doe",
-    date: "2024-08-29",
-  },
-  {
-    id: 3,
-    text: "Finish the Vue.js project",
-    tag: "work",
-    username: "Jane Smith",
-    date: "2024-08-30",
-  },
-  {
-    id: 4,
-    text: "Check the new JavaScript ES features",
-    tag: "programming",
-    username: "Gustavo Vargas",
-    date: "2024-09-01",
-  },
-  {
-    id: 5,
-    text: "Plan weekend trip",
-    tag: "personal",
-    username: "Mike Johnson",
-    date: "2024-08-28",
-  },
-  {
-    id: 6,
-    text: "Read up on AI advancements",
-    tag: "technology",
-    username: "Sarah Lee",
-    date: "2024-09-03",
-  },
-];
+//** Connection */
+
+const connection = mysqlConn.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306,
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.log("Error connectiong to notes db", err);
+    return;
+  }
+
+  console.log("Connection to notes api successful");
+});
+/************** */
 
 /** Get ALL Notes */
 router.get("/", (req, res) => {
-  res.send({
-    success: true,
-    data: notes,
+  const query = "SELECT * FROM notes";
+
+  connection.query(query, (err, result) => {
+    if (err) {
+      console.error("Error executing query: ", err);
+      res.status(500).send({ error: "Database query failed" });
+      return;
+    }
+
+    res.send({ success: true, data: result });
   });
 });
 
-/** get note by ID */
-
+/** Get a single note by ID */
 router.get("/:id", (req, res) => {
-  const note = notes.find((idea) => idea.id === +req.params.id);
+  const noteID = req.params.id;
+  const query = "SELECT * FROM notes WHERE id = ?";
+  // console.log(noteID, query);
+  connection.query(query, [noteID], (err, result) => {
+    if (err) {
+      console.error("Error executing query: ", err);
+      res.status(500).send({ error: "Database query failed" });
+      return;
+    }
 
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      error: "Resource not found",
-    });
-  }
+    // Ensure the result is not empty and contains only one row
+    if (result.length === 0) {
+      res.status(404).send({ success: false, error: "Note not found" });
+      return;
+    }
 
-  res.json({
-    success: true,
-    data: note,
+    res.send({ success: true, data: result[0] });
   });
 });
 
-// add a new note
-
+// Add a new note
 router.post("/", (req, res) => {
-  const note = {
-    id: notes.length + 1,
-    text: req.body.text,
-    tag: req.body.tag,
-    username: req.body.username,
-    date: new Date().toISOString().slice(0,10),
-  };
+  const { text, tag, username } = req.body;
+  const date = new Date().toISOString().slice(0, 10);
 
-  notes.push(note);
-  console.log(note)
-  res.send({ success: true, data: note });
+  const query = "INSERT INTO notes (txt, tag, username, date) VALUES (?,?,?,?)";
+  const values = [text, tag, username, date];
 
+  connection.query(query, values, (err, result) => {
+    if (err) {
+      console.error("Error executing query: ", err);
+      res.status(500).send({ error: "Database query failed" });
+      return;
+    }
+
+    const newNote = {
+      id: result.insertId,
+      text: result.text,
+      tag: result.tag,
+      username: username,
+      date: date,
+    };
+
+    res.send({ success: true, data: newNote });
+  });
 });
 
-// update a note
+// Delete a note
+router.delete("/:id", (req, res) => {
+  const noteID = req.params.id;
+  const query = "DELETE FROM notes WHERE id = ?";
 
-router.put("/:id", (req, res) => {
-  const note = notes.find((idea) => idea.id === +req.params.id);
+  connection.query(query, [noteID], (err, result) => {
+    if (err) {
+      console.error("Error executing query: ", err);
+      res.status(500).send({ error: "Database query failed" });
+      return;
+    }
 
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      error: "Resource not found",
-    });
-  }
+    res.send({ success: true });
+  });
+});
 
-  note.text = req.body.text || note.text;
-  note.tag = req.body.tag || note.tag;
-
-  res.send({ success: true, data: note})
-})
-
-// delete a note
-
-router.delete("/:id", (req, res) =>{
-  const note = notes.find(note => note.id === +req.params.id)
-
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      error: "Resource not found",
-    });
-  }
-
-  notes.splice(notes.indexOf(note), 1)
-  res.send({success:true});
-})
+// Update a note
 
 module.exports = router;
