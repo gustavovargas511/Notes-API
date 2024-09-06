@@ -105,4 +105,51 @@ router.delete("/:id", (req, res) => {
 
 // Update a note
 
+router.put("/:id", (req, res) => {
+  const id = req.params.id;
+  const { text, tag, username } = req.body;
+
+  // Validate at least one param is provided
+  if (!text && !tag && !username) {
+    return res
+      .status(404)
+      .json({ error: "At least one field is required for update" });
+  }
+
+  let query = "UPDATE notes SET";
+  const updates = [];
+  const values = [];
+
+  if (text) {
+    updates.push("txt = ?");
+    values.push(text);
+  }
+  if (tag) {
+    updates.push("tag = ?");
+    values.push(tag);
+  }
+  if (username) {
+    updates.push("username = ?");
+    values.push(username);
+  }
+
+  query += ` ${updates.join(", ")} WHERE id = ?`;
+  values.push(id); // Add the ID as the last parameter for the WHERE clause
+
+  connection.query(query, values, (err, result) => {
+    if (err) {
+      console.error("Error executing query: ", err);
+      return res
+        .status(500)
+        .send({ success: false, error: "Database query failed" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send({ success: false, error: "Note not found" });
+    }
+
+    res.send({ success: true, message: "Note updated successfully" });
+  });
+});
+
 module.exports = router;
